@@ -9,16 +9,33 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: 看看仓库里有什么
+        run: ls -R | head -100
+
+      - name: 找到工程目录
+        id: loc
+        run: |
+          f=$(find . -name settings.gradle | head -1)
+          if [ -z "$f" ]; then echo "没找到 settings.gradle，说明工程文件没传上来"; exit 1; fi
+          echo "dir=$(dirname $f)" >> $GITHUB_OUTPUT
+          echo "工程目录是 $(dirname $f)"
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
-      - run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: 编译
+        working-directory: ${{ steps.loc.outputs.dir }}
+        run: gradle assembleDebug --no-daemon --stacktrace
+
       - uses: actions/upload-artifact@v4
         with:
           name: apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: ${{ steps.loc.outputs.dir }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
